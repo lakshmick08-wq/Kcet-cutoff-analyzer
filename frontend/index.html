@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta name="description" content="KCET Cutoff Analyzer — Upload KCET cutoff PDFs and instantly analyze engineering college cutoffs by branch, GM rank, and college." />
+  <title>KCET Cutoff Analyzer</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+  <link rel="stylesheet" href="style.css?v=4" />
+
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════════════════════════════════════ -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <div class="brand-logo" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">KCET Cutoff Analyzer</h1>
+          <p class="brand-sub">Upload a KCET PDF · Extract · Analyze</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="session-selector-wrap" id="session-selector-wrap" style="display:none;">
+          <label for="session-select" class="sr-only">Select session</label>
+          <select id="session-select" class="session-select" aria-label="Select upload session">
+            <option value="">Select a session…</option>
+          </select>
+          <button id="btn-delete-session" class="btn btn-danger-outline" title="Delete this session's data">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       MAIN
+  ══════════════════════════════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- ── Upload Section ───────────────────────────────────────────────── -->
+    <section class="card upload-card" id="upload-section" aria-labelledby="upload-heading">
+      <div class="upload-zone" id="upload-zone" tabindex="0" role="button"
+           aria-label="Upload KCET cutoff PDF by clicking or dragging a file here">
+        <div class="upload-icon" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div class="upload-text">
+          <h2 id="upload-heading" class="upload-title">Upload KCET Cutoff Data File</h2>
+          <p class="upload-hint">Drag &amp; drop your KEA cutoff file here, or <span class="upload-browse">click to browse</span></p>
+          <p class="upload-note">Official KEA PDF (PROF_CODE_E_R_*.pdf) &nbsp;&middot;&nbsp; Word &nbsp;&middot;&nbsp; Excel &nbsp;&middot;&nbsp; HTML &nbsp;&middot;&nbsp; TXT &nbsp;|&nbsp; Max 100 MB</p>
+        </div>
+        <input type="file" id="file-input"
+               accept=".pdf,.docx,.doc,.xlsx,.xls,.html,.htm,.txt"
+               class="file-input-hidden"
+               aria-label="Select KCET cutoff file (PDF, Word, Excel, HTML, or TXT)" />
+      </div>
+
+      <!-- Progress bar (hidden until upload starts) -->
+      <div class="upload-progress-wrap" id="upload-progress-wrap" style="display:none;" aria-live="polite">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-bar"></div>
+        </div>
+        <p class="progress-label" id="progress-label">Uploading & parsing…</p>
+      </div>
+
+      <!-- Error / success message -->
+      <div class="upload-message" id="upload-message" role="alert" aria-live="assertive"></div>
+    </section>
+
+    <!-- ── Stats Dashboard ─────────────────────────────────────────────── -->
+    <section class="stats-section" id="stats-section" style="display:none;" aria-label="Upload statistics">
+      <div class="stats-grid">
+        <div class="stat-card" id="stat-total">
+          <div class="stat-icon stat-blue" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3h18v18H3z M9 9h6 M9 12h6 M9 15h4"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Total Records</span>
+            <span class="stat-value" id="sv-total">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-cse">
+          <div class="stat-icon stat-green" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/>
+              <line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">CSE Branches</span>
+            <span class="stat-value" id="sv-cse">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-aiml">
+          <div class="stat-icon stat-purple" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">AI/ML Branches</span>
+            <span class="stat-value" id="sv-aiml">0</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-highest">
+          <div class="stat-icon stat-red" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Highest Cutoff Rank</span>
+            <span class="stat-value" id="sv-highest">—</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-lowest">
+          <div class="stat-icon stat-orange" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Lowest Cutoff Rank</span>
+            <span class="stat-value" id="sv-lowest">—</span>
+          </div>
+        </div>
+
+        <div class="stat-card" id="stat-avg">
+          <div class="stat-icon stat-teal" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+              <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="17" x2="22" y2="17"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <span class="stat-label">Average Cutoff Rank</span>
+            <span class="stat-value" id="sv-avg">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Results Section ────────────────────────────────────────────────── -->
+    <section class="card results-card" id="results-section" style="display:none;" aria-labelledby="results-heading">
+
+      <!-- Controls bar -->
+      <div class="controls-bar">
+        <div class="controls-row-top">
+          <h2 id="results-heading" class="section-title">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+              <line x1="8" y1="18" x2="21" y2="18"/>
+              <line x1="3" y1="6" x2="3.01" y2="6"/>
+              <line x1="3" y1="12" x2="3.01" y2="12"/>
+              <line x1="3" y1="18" x2="3.01" y2="18"/>
+            </svg>
+            Results
+            <span class="result-badge" id="result-count-badge"></span>
+          </h2>
+          <div class="export-group">
+            <button id="btn-export-csv" class="btn btn-export" title="Export to CSV">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV
+            </button>
+            <button id="btn-export-excel" class="btn btn-export" title="Export to Excel">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Export Excel
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter row -->
+        <div class="filters-row">
+          <!-- Search -->
+          <div class="search-wrap">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="search" id="search-input" class="form-input search-input"
+              placeholder="Search college or branch…" aria-label="Search by college or branch name" />
+          </div>
+
+          <!-- Branch filter -->
+          <select id="branch-filter" class="form-select" aria-label="Filter by branch">
+            <option value="">All Branches</option>
+            <optgroup label="Computer Science">
+              <option value="Computer Science">CSE (All variants)</option>
+              <option value="Artificial Intelligence And Machine Learning">AI &amp; ML (incl. CSE)</option>
+              <option value="Artificial Intelligence And Data Science">AI &amp; Data Science</option>
+              <option value="Data Science">Data Science</option>
+              <option value="Cyber Security">Cyber Security</option>
+              <option value="Internet Of Things">IoT</option>
+            </optgroup>
+            <optgroup label="Electronics">
+              <option value="Electronics And Communication">ECE</option>
+              <option value="Electronics And Telecommunication">E &amp; TC</option>
+              <option value="Electronics And Instrumentation">E &amp; Instrumentation</option>
+              <option value="Electrical">EEE / EE</option>
+            </optgroup>
+            <optgroup label="Core Engineering">
+              <option value="Mechanical">Mechanical</option>
+              <option value="Civil">Civil</option>
+              <option value="Chemical">Chemical</option>
+              <option value="Industrial">Industrial Engg</option>
+              <option value="Aero">Aerospace / Aeronautical</option>
+              <option value="Information Science">Information Science (ISE)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="Bio-Technology">Bio-Technology</option>
+              <option value="Silk Technology">Silk Technology</option>
+              <option value="Textile">Textiles Technology</option>
+              <option value="Architecture">Architecture</option>
+              <option value="Mining">Mining</option>
+              <option value="Agriculture">Agriculture</option>
+              <option value="Metallurgy">Metallurgy</option>
+            </optgroup>
+          </select>
+
+          <!-- Category filter (populated dynamically from /api/categories/{sessionId}) -->
+          <div class="category-filter-wrap">
+            <label for="category-filter" class="form-label">Merit Category</label>
+            <select id="category-filter" class="form-select category-select"
+                    aria-label="Select merit category" disabled>
+              <option value="GM">GM — General Merit</option>
+            </select>
+          </div>
+
+
+          <div class="gm-filter-wrap">
+            <label for="gm-input" class="form-label">Your KCET Rank</label>
+            <input type="number" id="gm-input" class="form-input gm-input"
+              placeholder="e.g. 50000" min="1" max="300000" step="1000"
+              aria-label="Enter your KCET rank to see eligible colleges" />
+            <button id="btn-show-all" class="btn btn-outline-sm" title="Show all colleges" type="button">Show All</button>
+          </div>
+
+          <!-- Apply button -->
+          <button id="btn-apply-filters" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+            </svg>
+            Apply
+          </button>
+        </div>
+
+        <!-- Sort buttons -->
+        <div class="sort-row" role="group" aria-label="Sort options">
+          <span class="sort-label">Sort:</span>
+          <button class="btn btn-sort active" id="sort-rank-asc" data-sort="rank_asc" aria-pressed="true">
+            Lowest Cutoff First
+          </button>
+          <button class="btn btn-sort" id="sort-rank-desc" data-sort="rank_desc" aria-pressed="false">
+            Highest Cutoff First
+          </button>
+          <button class="btn btn-sort" id="sort-college" data-sort="college" aria-pressed="false">
+            College Name
+          </button>
+          <button class="btn btn-sort" id="sort-branch" data-sort="branch" aria-pressed="false">
+            Branch Name
+          </button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrapper" role="region" aria-label="Cutoff results table" tabindex="0">
+        <table class="cutoff-table" id="cutoff-table" aria-live="polite">
+          <thead>
+            <tr>
+              <th scope="col">#</th>
+              <th scope="col">College Code</th>
+              <th scope="col">College Name</th>
+              <th scope="col">Branch</th>
+              <th scope="col" id="th-cutoff">GM Cutoff Rank</th>
+              <th scope="col">Eligibility</th>
+            </tr>
+          </thead>
+          <tbody id="table-body">
+            <!-- Rows inserted by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="empty-state" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
+          fill="none" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <p id="empty-state-text">No colleges found for this rank. Try a higher rank number or click <strong>Show All</strong>.</p>
+      </div>
+
+      <!-- Loading state -->
+      <div class="table-loading" id="table-loading" style="display:none;" aria-live="polite">
+        <div class="spinner" aria-label="Loading results"></div>
+        <p>Loading results…</p>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination-bar" id="pagination-bar" style="display:none;" aria-label="Table pagination">
+        <button class="btn btn-page" id="btn-prev" aria-label="Previous page" disabled>
+          ‹ Prev
+        </button>
+        <div class="page-info" id="page-info" aria-live="polite"></div>
+        <button class="btn btn-page" id="btn-next" aria-label="Next page">
+          Next ›
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════════════════════════════════ -->
+  <footer class="app-footer">
+    <p>KCET Cutoff Analyzer · Data extracted from official KEA PDFs · No data is transmitted externally</p>
+  </footer>
+
+  <script src="script.js?v=4"></script>
+
+</body>
+</html>

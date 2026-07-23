@@ -1,0 +1,8 @@
+com\kcet\analyzer\KcetAnalyzerApplication.class
+com\kcet\analyzer\model\CollegeCutoff.class
+com\kcet\analyzer\service\CutoffService.class
+com\kcet\analyzer\controller\CutoffController.class
+com\kcet\analyzer\service\PdfParserService.class
+com\kcet\analyzer\util\FileTextExtractorUtil.class
+com\kcet\analyzer\repository\CollegeCutoffRepository.class
+com\kcet\analyzer\util\PdfParserUtil.class
